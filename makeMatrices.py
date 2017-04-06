@@ -2,7 +2,6 @@ import csv
 import json
 import matplotlib
 from matplotlib import path
-import VehicleLocation
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from collections import deque
@@ -11,7 +10,7 @@ import threading
 import Queue
 import math
 import time
-import pnpoly
+import sys
 
 
 def make_polygon_list():
@@ -70,12 +69,31 @@ def add_to_paths(work, polygon_list, vehicle_paths, region_points):
     create_object_time = 0
     while True:
         path = work.get()
-        # print len(path)
         for row in path:
-
             # v = VehicleLocation.VehicleLocation(row[0], row[1], row[2], row[3], polygon_list)
             start = time.time()
-            region = which_polygon(float(row[2]), float(row[3]), polygon_list)
+            region = -1
+                
+            # get 10 closest regions
+            distance_list = make_distance_list(float(row[2]), float(row[3]), region_points)
+            smallest_indices = [-1] * 10
+            for i in xrange(10):
+                smallest = sys.float_info.max
+                for j in xrange(len(distance_list)):
+                    distance = distance_list[j]
+                    if distance < smallest:
+                        smallest = distance
+                        smallest_indices[i] = j
+                distance_list[smallest_indices[i]] = sys.float_info.max
+
+            # check if in top 10
+            for index in smallest_indices:
+                if polygon_list[index].contains_points([(float(row[2]), float(row[3]))]):
+                    region = index
+                    break
+            
+            if region == -1:
+                region = which_polygon(float(row[2]), float(row[3]), polygon_list)
             # region = which_polygon_pnpoly(float(row[2]), float(row[3]), polygon_list)
             end = time.time()
             which_polygon_time += (end - start)
@@ -106,7 +124,7 @@ def make_matrices(vehicle_list):
             print 'a'
 
 
-def make_vehicle_array(filename, polygon_list):
+def make_vehicle_array(filename, polygon_list, region_points):
     # GENERATES GRAPH OF REGIONS
     # fig = plt.figure()
     # ax = fig.add_subplot(111)
@@ -124,7 +142,7 @@ def make_vehicle_array(filename, polygon_list):
     # vehicle_paths = np.array([[], []])
     work = Queue.Queue()
     for i in xrange(1):  # (last_vehicle_id):
-        t = threading.Thread(target=add_to_paths, args=(work, polygon_list, vehicle_paths))
+        t = threading.Thread(target=add_to_paths, args=(work, polygon_list, vehicle_paths, region_points))
         t.daemon = True
         t.start()
 
@@ -186,8 +204,8 @@ region_points = make_region_points(plist)
 
 
 
-# vehicle_paths = make_vehicle_array("small_private_raw_p.txt", plist_path, region_points)
-# print 'TOTAL TIME: ', time.time()-start
+vehicle_paths = make_vehicle_array("small_private_raw_p.txt", plist_path, region_points)
+print 'TOTAL TIME: ', time.time()-start
 # a = np.zeros([],[])
 
 
