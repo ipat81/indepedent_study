@@ -1,3 +1,4 @@
 *.txt
 venv/
 shenzhen_tran_mapbox_polygon.json
+!requirements.txt
