@@ -12,6 +12,7 @@ import math
 import time
 import sys
 
+MIN_STOP_TIME = 180
 
 def make_polygon_list():
     polygon_list = []
@@ -114,16 +115,6 @@ def add_to_paths(work, polygon_list, vehicle_paths, region_points):
         print 'after work_done', threading.currentThread(), 'which_polygon_time: ', which_polygon_time, 'append time: ', \
             append_to_list_time, 'create time: ', create_object_time, 'region: ', region
 
-
-def make_matrices(vehicle_list):
-
-    matrices = [[]]
-
-    for vl in vehicle_list:
-        for v in vl:
-            print 'a'
-
-
 def make_vehicle_array(filename, polygon_list, region_points):
     # GENERATES GRAPH OF REGIONS
     # fig = plt.figure()
@@ -196,15 +187,72 @@ def make_distance_list(lon, lat, region_points):
         distances.append(distance((lon,lat), (r[0],r[1])))
     return distances
 
+def make_matrices(vehicle_paths, num_regions):
+    matrices = [[[0] * num_regions for j in xrange(num_regions)] for i in xrange(288)]
 
+    for path in vehicle_paths:
+        # ya never know
+        if len(path) < 2:
+            continue
+
+        #TODO: remove this, only for testing
+        origin = path[0]
+
+        origin_region = path[0][4]
+        origin_time = path[0][1]
+        origin_coord = (path[0][2], path[0][3])
+        last_location_coord = last_location_time = last_location_region = None
+        last_location_duration = 0
+
+        for i in xrange(1, len(path)):
+            location = path[i]
+            location_time = location[1]
+            location_coord = (location[2], location[3])
+            location_region = location[4]
+
+            # we are still at the previous destination stop so skip
+            if location_coord == origin_coord:
+                continue
+            
+            # just set a new origin so theres no last location since leaving the origin
+            if not last_location_coord:
+                last_location_coord = location_coord
+                last_location_time = location_time
+                last_location_region = location_region
+            # the vehicle stayed in the same place
+            elif last_location_coord == location_coord:
+                # update time spent at location
+                last_location_duration += location_time - last_location_time
+                last_location_time = location_time
+
+                if last_location_duration >= MIN_STOP_TIME:
+                    # update matrix
+                    matrix_index = (origin_time % 86400) / 300
+                    matrices[matrix_index][origin_region][last_location_region] += 1
+                    #print 'UPDATE = matrix_index: ', matrix_index, 'origin: ', origin[2], ', ', origin[3], 'dest: ', location[2], ', ', location[3]
+
+                    # update origin to last location and reset last location
+                    origin_region = last_location_region
+                    origin_time = last_location_time
+                    origin_coord = location_coord
+                    last_location_coord = last_location_time = last_location_region = None
+                    last_location_duration = 0
+            # the vehicle moved to another location
+            else:
+                last_location_coord = location_coord
+                last_location_time = location_time
+                last_location_region = location_region
+                last_location_duration = 0
+                
+    return matrices
+            
 start = time.time()
 plist_path = make_polygon_list()
 plist = make_pnpoly_polygon_list()
 region_points = make_region_points(plist)
-
-
-
 vehicle_paths = make_vehicle_array("small_private_raw_p.txt", plist_path, region_points)
+# we add 1 to arg2 for the "out of city" region
+matrices = make_matrices(vehicle_paths, len(plist) + 1)
 print 'TOTAL TIME: ', time.time()-start
 # a = np.zeros([],[])
 
@@ -216,6 +264,3 @@ print 'TOTAL TIME: ', time.time()-start
 
 # for v in vehicle_paths[4]:
 #     print v
-
-
-
