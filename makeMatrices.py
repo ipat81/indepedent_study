@@ -9,7 +9,7 @@ from collections import deque
 from itertools import repeat
 import threading
 import Queue
-import numpy as np
+import math
 import time
 import pnpoly
 
@@ -30,9 +30,8 @@ def make_pnpoly_polygon_list():
     with open('shenzhen_tran_mapbox_polygon.json') as data_file:
         data = json.load(data_file)
         for x in range(0, len(data['features'])):
-            p = (data['features'][x]['geometry']['coordinates'][0])
+            p = data['features'][x]['geometry']['coordinates'][0]
             polygon_list.append(p)
-
 
     return polygon_list
 
@@ -64,7 +63,7 @@ def which_polygon_pnpoly(lon, lat, polygon_list):
     return x
 
 
-def add_to_paths(work, polygon_list, vehicle_paths):
+def add_to_paths(work, polygon_list, vehicle_paths, region_points):
    #  print threading.currentThread()
     which_polygon_time = 0
     append_to_list_time = 0
@@ -76,8 +75,8 @@ def add_to_paths(work, polygon_list, vehicle_paths):
 
             # v = VehicleLocation.VehicleLocation(row[0], row[1], row[2], row[3], polygon_list)
             start = time.time()
-            # region = which_polygon(float(row[2]), float(row[3]), polygon_list)
-            region = which_polygon_pnpoly(float(row[2]), float(row[3]), polygon_list)
+            region = which_polygon(float(row[2]), float(row[3]), polygon_list)
+            # region = which_polygon_pnpoly(float(row[2]), float(row[3]), polygon_list)
             end = time.time()
             which_polygon_time += (end - start)
 
@@ -94,7 +93,8 @@ def add_to_paths(work, polygon_list, vehicle_paths):
 
 
         work.task_done()
-        print 'after work_done', threading.currentThread(), 'which_polygon_time: ', which_polygon_time, 'append time: ', append_to_list_time, 'create time: ', create_object_time
+        print 'after work_done', threading.currentThread(), 'which_polygon_time: ', which_polygon_time, 'append time: ', \
+            append_to_list_time, 'create time: ', create_object_time, 'region: ', region
 
 
 def make_matrices(vehicle_list):
@@ -123,7 +123,7 @@ def make_vehicle_array(filename, polygon_list):
     vehicle_paths = [[] for i in repeat(None, last_vehicle_id+1)]
     # vehicle_paths = np.array([[], []])
     work = Queue.Queue()
-    for i in xrange(last_vehicle_id):
+    for i in xrange(1):  # (last_vehicle_id):
         t = threading.Thread(target=add_to_paths, args=(work, polygon_list, vehicle_paths))
         t.daemon = True
         t.start()
@@ -168,11 +168,26 @@ def make_region_points(polygon_list):
     return centroids
 
 
+def distance(p0, p1):
+    return math.sqrt((p0[0] - p1[0])**2 + (p0[1] - p1[1])**2)
 
-# plist = make_polygon_list()
+
+def make_distance_list(lon, lat, region_points):
+    distances = []
+    for r in region_points:
+        distances.append(distance((lon,lat), (r[0],r[1])))
+    return distances
+
+
+start = time.time()
+plist_path = make_polygon_list()
 plist = make_pnpoly_polygon_list()
-vehicle_paths = make_vehicle_array("small_private_raw_p.txt", plist)
+region_points = make_region_points(plist)
 
+
+
+# vehicle_paths = make_vehicle_array("small_private_raw_p.txt", plist_path, region_points)
+# print 'TOTAL TIME: ', time.time()-start
 # a = np.zeros([],[])
 
 
