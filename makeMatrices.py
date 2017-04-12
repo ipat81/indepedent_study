@@ -11,6 +11,7 @@ import Queue
 import math
 import time
 import sys
+import pandas as pd
 
 MIN_STOP_TIME = 180
 
@@ -63,13 +64,15 @@ def which_polygon_pnpoly(lon, lat, polygon_list):
     return x
 
 
-def add_to_paths(work, polygon_list, vehicle_paths, region_points):
+#def add_to_paths(work, polygon_list, vehicle_paths, region_points):
+def add_to_paths(path, polygon_list, vehicle_paths, region_points):
+    return
    #  print threading.currentThread()
     which_polygon_time = 0
     append_to_list_time = 0
     create_object_time = 0
     while True:
-        path = work.get()
+        #path = work.get()
         for row in path:
             # v = VehicleLocation.VehicleLocation(row[0], row[1], row[2], row[3], polygon_list)
             start = time.time()
@@ -111,9 +114,9 @@ def add_to_paths(work, polygon_list, vehicle_paths, region_points):
             append_to_list_time += (end-start)
 
 
-        work.task_done()
-        print 'after work_done', threading.currentThread(), 'which_polygon_time: ', which_polygon_time, 'append time: ', \
-            append_to_list_time, 'create time: ', create_object_time, 'region: ', region
+        #work.task_done()
+        #print 'after work_done', threading.currentThread(), 'which_polygon_time: ', which_polygon_time, 'append time: ', \
+            #append_to_list_time, 'create time: ', create_object_time, 'region: ', region
 
 def make_vehicle_array(filename, polygon_list, region_points):
     # GENERATES GRAPH OF REGIONS
@@ -126,21 +129,26 @@ def make_vehicle_array(filename, polygon_list, region_points):
     # ax.set_ylim(21, 23)
     f = open(filename, 'rb')
     reader = csv.reader(f)
+    #reader = pd.read_csv(filename)
 
-    last_vehicle_id = int(get_last_row(reader)[0])
+    #last_vehicle_id = int(get_last_row(reader)[0])
+    last_vehicle_id = 10
 
     vehicle_paths = [[] for i in repeat(None, last_vehicle_id+1)]
     # vehicle_paths = np.array([[], []])
-    work = Queue.Queue()
+    """work = Queue.Queue()
     for i in xrange(1):  # (last_vehicle_id):
         t = threading.Thread(target=add_to_paths, args=(work, polygon_list, vehicle_paths, region_points))
         t.daemon = True
         t.start()
+    """
 
     f.seek(0)
     temp = []
     curV = -1
+    #for row in reader.itertuples():
     for row in reader:
+        #print row
         if len(row) != 4:  # each row should be id, time, long, lat
             continue
 
@@ -150,7 +158,8 @@ def make_vehicle_array(filename, polygon_list, region_points):
         if curV == int(row[0]):
             temp.append(row)
         else:
-            work.put(temp)
+            #work.put(temp)
+            add_to_paths(temp, polygon_list, vehicle_paths, region_points)
             temp = []
             temp.append(row)
             curV = int(row[0])
@@ -158,9 +167,9 @@ def make_vehicle_array(filename, polygon_list, region_points):
         #v = VehicleLocation.VehicleLocation(row[0], row[1], row[2], row[3], polygon_list)
         #vehicle_paths[v.id].append(v)
         #print v.id
-    work.put(temp)
+    #work.put(temp)
 
-    work.join()
+    #work.join()
 
     return vehicle_paths
 
@@ -247,16 +256,14 @@ def make_matrices(vehicle_paths, num_regions):
     # TODO: write to .mat file
     return matrices
             
-start = time.time()
 plist_path = make_polygon_list()
 plist = make_pnpoly_polygon_list()
 region_points = make_region_points(plist)
-vehicle_paths = make_vehicle_array("small_private_raw_p.txt", plist_path, region_points)
-# we add 1 to arg2 for the "out of city" region
-matrices = make_matrices(vehicle_paths, len(plist) + 1)
+start = time.time()
+vehicle_paths = make_vehicle_array("private_raw_p.txt", plist_path, region_points)
 print 'TOTAL TIME: ', time.time()-start
-# a = np.zeros([],[])
-
+# we add 1 to arg2 for the "out of city" region
+#matrices = make_matrices(vehicle_paths, len(plist) + 1)
 
 # c = make_region_points(plist)
 #
