@@ -243,7 +243,8 @@ def make_matrices(vehicle_paths, num_regions):
                 last_location_time = location_time
                 last_location_region = location_region
                 last_location_duration = 0
-                
+    
+    # TODO: write to .mat file
     return matrices
             
 start = time.time()
