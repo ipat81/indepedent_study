@@ -13,6 +13,7 @@ from matplotlib import path
 import pandas as pd
 
 MIN_STOP_TIME = 180
+MATRIX_TIME_INTERVAL = 300
 
 
 def make_polygon_list():
@@ -87,6 +88,64 @@ def make_distance_list(lon, lat, region_points):
     return distances
 
 
+def make_matrices(vehicle_paths, num_regions):
+    num_matrices = 86400 / MATRIX_TIME_INTERVAL
+    matrices = [[[0] * num_regions for j in xrange(num_regions)] for i in xrange(num_matrices)]
+
+    for path in vehicle_paths:
+        # ya never know
+        if len(path) < 2:
+            continue
+
+        origin_region = path[0][4]
+        origin_time = path[0][1]
+        origin_coord = (path[0][2], path[0][3])
+        last_location_coord = last_location_time = last_location_region = None
+        last_location_duration = 0
+
+        for i in xrange(1, len(path)):
+            location = path[i]
+            location_time = location[1]
+            location_coord = (location[2], location[3])
+            location_region = location[4]
+
+            # we are still at the previous destination stop so skip
+            if location_coord == origin_coord:
+                continue
+            
+            # just set a new origin so theres no last location since leaving the origin
+            if not last_location_coord:
+                last_location_coord = location_coord
+                last_location_time = location_time
+                last_location_region = location_region
+            # the vehicle stayed in the same place
+            elif last_location_coord == location_coord:
+                # update time spent at location
+                last_location_duration += location_time - last_location_time
+                last_location_time = location_time
+
+                if last_location_duration >= MIN_STOP_TIME:
+                    # update matrix
+                    matrix_index = (origin_time % 86400) / 300
+                    matrices[matrix_index][origin_region][last_location_region] += 1
+
+                    # update origin to last location and reset last location
+                    origin_region = last_location_region
+                    origin_time = last_location_time
+                    origin_coord = location_coord
+                    last_location_coord = last_location_time = last_location_region = None
+                    last_location_duration = 0
+            # the vehicle moved to another location
+            else:
+                last_location_coord = location_coord
+                last_location_time = location_time
+                last_location_region = location_region
+                last_location_duration = 0
+    
+    # TODO: write to .mat file
+    return matrices
+
+
 def make_vehicle_array(filename, polygon_list, region_points, use_pandas=False):
     total_time = time.time()
     f = open(filename, 'rb')
@@ -115,11 +174,13 @@ def make_vehicle_array(filename, polygon_list, region_points, use_pandas=False):
         if len(row) < 4 or any(pd.isnull(val) for val in row):  # each row should be id, time, long, lat
             continue
 
+        offset = 1 if use_pandas else 0
+
         region = -1
 
         top10_time = time.time()
         # 10 closest regions
-        distance_list = make_distance_list(float(row[2]), float(row[3]), region_points)
+        distance_list = make_distance_list(float(row[2 + offset]), float(row[3 + offset]), region_points)
         smallest_indices = [-1] * 10
         for i in xrange(10):
             smallest = sys.float_info.max
@@ -130,22 +191,21 @@ def make_vehicle_array(filename, polygon_list, region_points, use_pandas=False):
                     smallest_indices[i] = j
             distance_list[smallest_indices[i]] = sys.float_info.max
         total_top10_time += time.time() - top10_time
-        print total_top10_time
 
         # check top 10
         for index in smallest_indices:
-            if polygon_list[index].contains_points([(float(row[2]), float(row[3]))]):
+            if polygon_list[index].contains_points([(float(row[2 + offset]), float(row[3 + offset]))]):
                 region = index
                 break
 
         which_polygon_time = time.time()
         # check the rest
         if region == -1:
-            region = which_polygon(float(row[2]), float(row[3]), polygon_list)
+            region = which_polygon(float(row[2 + offset]), float(row[3 + offset]), polygon_list)
         total_whichpolygon_time += time.time() - which_polygon_time
 
         create_time = time.time()
-        v = [int(row[0]), int(row[1]), float(row[2]), float(row[3]), region]
+        v = [int(row[0 + offset]), int(row[1 + offset]), float(row[2 + offset]), float(row[3 + offset]), region]
         total_create_time += time.time() - create_time
 
         append_time = time.time()
