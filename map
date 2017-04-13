@@ -1,0 +1,169 @@
+import de.fhpotsdam.unfolding.providers.Microsoft;
+import de.fhpotsdam.unfolding.providers.Google;
+import de.fhpotsdam.unfolding.providers.OpenStreetMap;
+import de.fhpotsdam.unfolding.providers.Yahoo;
+import de.fhpotsdam.unfolding.*;
+import de.fhpotsdam.unfolding.geo.*;
+import de.fhpotsdam.unfolding.utils.*;
+import de.fhpotsdam.unfolding.marker.*;
+BufferedReader reader;
+String line;
+  UnfoldingMap map;
+MarkerManager<Marker> markerManager;
+
+ArrayList<ArrayList<float[]>> locations;
+int count = 0;
+
+ArrayList<ArrayList<float[]>> readFile() {
+  ArrayList<ArrayList<float[]>> locations = new ArrayList<ArrayList<float[]>>(1440);
+  for (int x = 0; x<1440; x++) {
+    ArrayList<float[]> arr = new ArrayList<float[]>();
+    locations.add(arr);
+  }
+  float prevId = -1.0;
+  int prevIntervalIndex = -1;
+
+  while (true) {
+    try {
+      line = reader.readLine();
+    } 
+    catch (IOException e) {
+      e.printStackTrace();
+      line = null;
+    }
+    if (line == null) {
+      // Stop reading because of an error or file is empty
+      break;
+    } else {
+      if (line.equals("")) {
+        continue;
+      }
+      String[] data = line.split(",");
+
+      if (data.length < 4) {
+        continue;
+      }
+
+      // first car
+      if (prevId == -1.0) {
+        prevId = Float.parseFloat(data[0]);
+      }
+      // new car
+      else if (prevId != float(data[0])) {
+        prevId = Float.parseFloat(data[0]);
+        prevIntervalIndex = -1;
+      }
+
+      // check if this is the closest time to the next interval to fill
+      int intervalIndex = (Math.round(Float.parseFloat(data[1])) % 86400) / 60;
+      if (intervalIndex > prevIntervalIndex) {
+        float[] newData = new float[3];
+        newData[0] = Float.parseFloat(data[0]);
+        newData[1] = Float.parseFloat(data[2]);
+        newData[2] = Float.parseFloat(data[3]);
+        locations.get(intervalIndex).add(newData);
+
+        // update prev ind
+        prevIntervalIndex = intervalIndex;
+      }
+    }
+  }
+
+  return locations;
+}
+void setup() {
+  size(800, 600);
+  String filename = "C:\\Users\\ishan\\PycharmProjects\\ind_study\\bus_raw_p.txt"; 
+  reader = createReader(filename);   
+  map =  new UnfoldingMap(this, new Microsoft.RoadProvider());
+  MapUtils.createDefaultEventDispatcher(this, map);
+  map.zoomAndPanTo(new Location(22.57356597f, 114.0544452f), 10);
+
+  ArrayList<ArrayList<float[]>> a = readFile();
+  locations = a;
+  markerManager = map.getDefaultMarkerManager();
+  frameRate(10);
+}
+
+void draw() {
+  map.draw();
+  markerManager.clearMarkers();
+  
+  
+  
+  if(count >= 288){
+    return;
+  }
+  
+  ArrayList<float[]> interval = locations.get(count++);
+
+  for (float[] v : interval) {
+    int vid = int(v[0]);
+    float lon = v[1];
+    float lat = v[2];
+    
+    System.out.println(vid);
+
+    Location startLocation = new Location(lat, lon);
+    SimplePointMarker startMarker = new SimplePointMarker(startLocation);
+    
+    int one = 0; int two = 0; int three = 0;
+    if(vid > 255){
+      three = 255;
+      vid -= 255;
+    }
+    else{
+      three = vid;
+      vid = 0;
+    }
+    
+    if(vid > 255){
+      two = 255;
+      vid -= 255;
+    }
+    else{
+      two = vid;
+      vid = 0;
+    }
+    
+    if(vid > 255){
+      one = 255;
+      vid -= 255;
+    }
+    else{
+      one = vid;
+      vid = 0;
+    }
+    
+
+    startMarker.setColor(color(one, two, three, vid));
+    markerManager.addMarker(startMarker);
+    // startMarker.setStrokeWeight(3);
+  
+    //startMarker.setColor(color(vid, 5, 100, vid*3));
+    // startMarker.setStrokeColor(color(vid, vid, vid));
+
+
+  }
+}
+
+
+
+    //Point
+    //    Location startLocation = new Location(starty, startx);
+    //    SimplePointMarker startMarker = new SimplePointMarker(startLocation);
+    //    map.addMarkers(startMarker);
+    //    startMarker.setStrokeWeight(1);
+  //public void mouseMoved() {
+  //    Marker hitMarker = map.getFirstHitMarker(mouseX, mouseY);
+  //    if (hitMarker != null) {
+  //        // Select current marker 
+  //        hitMarker.setSelected(true);
+  //        System.out.println(hitMarker.getLocation());
+  //    } else {
+  //        // Deselect all other markers
+  //        for (Marker marker : map.getMarkers()) {
+  //            marker.setSelected(false);
+  //        }
+  //    }
+  //}
