@@ -1,15 +1,15 @@
-import de.fhpotsdam.unfolding.providers.Microsoft;
+/*import de.fhpotsdam.unfolding.providers.Microsoft;
 import de.fhpotsdam.unfolding.providers.Google;
 import de.fhpotsdam.unfolding.providers.OpenStreetMap;
 import de.fhpotsdam.unfolding.providers.Yahoo;
 import de.fhpotsdam.unfolding.*;
 import de.fhpotsdam.unfolding.geo.*;
 import de.fhpotsdam.unfolding.utils.*;
-import de.fhpotsdam.unfolding.marker.*;
+import de.fhpotsdam.unfolding.marker.*;*/
 BufferedReader reader;
 String line;
-  UnfoldingMap map;
-MarkerManager<Marker> markerManager;
+  //UnfoldingMap map;
+//MarkerManager<Marker> markerManager;
 
 ArrayList<ArrayList<float[]>> locations;
 int count = 0;
@@ -73,19 +73,20 @@ ArrayList<ArrayList<float[]>> readFile() {
 }
 void setup() {
   size(800, 600);
-  String filename = "C:\\Users\\ishan\\PycharmProjects\\ind_study\\bus_raw_p.txt"; 
-  reader = createReader(filename);   
-  map =  new UnfoldingMap(this, new Microsoft.RoadProvider());
+      String filename = "/Users/bigolu/projects/indepedent_study/bus_raw_p.txt"; 
+      reader = createReader(filename);   
+      ArrayList<ArrayList<float[]>> a = readFile();
+  /*map =  new UnfoldingMap(this, new Microsoft.RoadProvider());
   MapUtils.createDefaultEventDispatcher(this, map);
   map.zoomAndPanTo(new Location(22.57356597f, 114.0544452f), 10);
 
   ArrayList<ArrayList<float[]>> a = readFile();
   locations = a;
   markerManager = map.getDefaultMarkerManager();
-  frameRate(10);
+  frameRate(10);*/
 }
 
-void draw() {
+/*void draw() {
   map.draw();
   markerManager.clearMarkers();
   
@@ -145,7 +146,7 @@ void draw() {
 
 
   }
-}
+}*/
 
 
 
