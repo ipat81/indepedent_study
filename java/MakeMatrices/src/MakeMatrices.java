@@ -64,7 +64,7 @@ public class MakeMatrices {
 		ArrayList<Polygon> plistPolygon = makePolygonList();
 		ArrayList<JSONArray> plist = makePnpolyPolygonList();
 		ArrayList<double[]> regionPoints = makeRegionPoints(plist);
-		ArrayList<ArrayList<double[]>> vehiclePaths = makeVehicleArray("private_raw_p.txt", plistPolygon, regionPoints);
+		ArrayList<ArrayList<double[]>> vehiclePaths = makeVehicleArray("data/private_raw_p.txt", plistPolygon, regionPoints);
 		
 		long endTime = System.nanoTime();
 		long duration = endTime - startTime;
@@ -74,7 +74,7 @@ public class MakeMatrices {
 	
 	public static ArrayList<Polygon> makePolygonList() throws FileNotFoundException, IOException, ParseException{
 		ArrayList<Polygon> polygonList = new ArrayList<Polygon>();
-		JSONObject data = (JSONObject) new JSONParser().parse(new FileReader("shenzhen_tran_mapbox_polygon.json"));
+		JSONObject data = (JSONObject) new JSONParser().parse(new FileReader("data/shenzhen_tran_mapbox_polygon.json"));
 		JSONArray features = (JSONArray) data.get("features");
 		
 		for(int i = 0; i < features.size(); i++){
@@ -92,7 +92,7 @@ public class MakeMatrices {
 	
 	public static ArrayList<JSONArray> makePnpolyPolygonList() throws FileNotFoundException, IOException, ParseException{
 		ArrayList<JSONArray> polygonList = new ArrayList<JSONArray>();
-		JSONObject data = (JSONObject) new JSONParser().parse(new FileReader("shenzhen_tran_mapbox_polygon.json"));
+		JSONObject data = (JSONObject) new JSONParser().parse(new FileReader("data/shenzhen_tran_mapbox_polygon.json"));
 		JSONArray features = (JSONArray) data.get("features");
 		
 		for(int i = 0; i < features.size(); i++){
