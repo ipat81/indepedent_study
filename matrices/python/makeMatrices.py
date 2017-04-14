@@ -14,11 +14,12 @@ import pandas as pd
 
 MIN_STOP_TIME = 180
 MATRIX_TIME_INTERVAL = 300
-
+REGIONS_FILE = 'data/shenzhen_tran_mapbox_polygon.json'
+PATHS_FILE = 'data/small_private_raw_p.txt'
 
 def make_polygon_list():
     polygon_list = []
-    with open('shenzhen_tran_mapbox_polygon.json') as data_file:
+    with open(REGIONS_FILE) as data_file:
         data = json.load(data_file)
         for x in range(0, len(data['features'])):
             p = path.Path(data['features'][x]['geometry']['coordinates'][0])
@@ -29,7 +30,7 @@ def make_polygon_list():
 
 def make_pnpoly_polygon_list():
     polygon_list = []
-    with open('shenzhen_tran_mapbox_polygon.json') as data_file:
+    with open(REGIONS_FILE) as data_file:
         data = json.load(data_file)
         for x in range(0, len(data['features'])):
             p = data['features'][x]['geometry']['coordinates'][0]
@@ -228,6 +229,6 @@ if __name__ == '__main__':
     plist_path = make_polygon_list()
     plist = make_pnpoly_polygon_list()
     region_points = make_region_points(plist)
-    vehicle_paths = make_vehicle_array("small_private_raw_p.txt", plist_path, region_points)
+    vehicle_paths = make_vehicle_array(PATHS_FILE, plist_path, region_points)
     # we add 1 to arg2 for the "out of city" region
-    #matrices = make_matrices(vehicle_paths, len(plist) + 1)
+    matrices = make_matrices(vehicle_paths, len(plist) + 1)
