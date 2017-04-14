@@ -1,20 +1,25 @@
-/*import de.fhpotsdam.unfolding.providers.Microsoft;
+import de.fhpotsdam.unfolding.providers.Microsoft;
 import de.fhpotsdam.unfolding.providers.Google;
 import de.fhpotsdam.unfolding.providers.OpenStreetMap;
 import de.fhpotsdam.unfolding.providers.Yahoo;
 import de.fhpotsdam.unfolding.*;
 import de.fhpotsdam.unfolding.geo.*;
 import de.fhpotsdam.unfolding.utils.*;
-import de.fhpotsdam.unfolding.marker.*;*/
-BufferedReader reader;
-String line;
-  //UnfoldingMap map;
-//MarkerManager<Marker> markerManager;
+import de.fhpotsdam.unfolding.marker.*;
 
-ArrayList<ArrayList<float[]>> locations;
+UnfoldingMap map;
+MarkerManager<Marker> markerManager;
+
+ArrayList<ArrayList<float[]>> private_data;
+ArrayList<ArrayList<float[]>> bus_data;
+ArrayList<ArrayList<float[]>> taxi_data;
+ArrayList<ArrayList<float[]>> truck_data;
 int count = 0;
 
-ArrayList<ArrayList<float[]>> readFile() {
+ArrayList<ArrayList<float[]>> readFile(String filename) {
+  String path = "C:\\Users\\ishan\\PycharmProjects\\ind_study\\";
+  BufferedReader reader = createReader(path+filename);
+  
   ArrayList<ArrayList<float[]>> locations = new ArrayList<ArrayList<float[]>>(1440);
   for (int x = 0; x<1440; x++) {
     ArrayList<float[]> arr = new ArrayList<float[]>();
@@ -22,7 +27,7 @@ ArrayList<ArrayList<float[]>> readFile() {
   }
   float prevId = -1.0;
   int prevIntervalIndex = -1;
-
+  String line = "";
   while (true) {
     try {
       line = reader.readLine();
@@ -73,80 +78,115 @@ ArrayList<ArrayList<float[]>> readFile() {
 }
 void setup() {
   size(800, 600);
-      String filename = "/Users/bigolu/projects/indepedent_study/bus_raw_p.txt"; 
-      reader = createReader(filename);   
-      ArrayList<ArrayList<float[]>> a = readFile();
-  /*map =  new UnfoldingMap(this, new Microsoft.RoadProvider());
+  
+  
+  map =  new UnfoldingMap(this, new Microsoft.RoadProvider());
   MapUtils.createDefaultEventDispatcher(this, map);
   map.zoomAndPanTo(new Location(22.57356597f, 114.0544452f), 10);
 
-  ArrayList<ArrayList<float[]>> a = readFile();
-  locations = a;
+  private_data = readFile("private_raw_p.txt");
+  bus_data = readFile("bus_raw_p.txt");
+  taxi_data = readFile("taxi_raw_p.txt");
+  truck_data = readFile("truck_raw_p.txt");
+  
   markerManager = map.getDefaultMarkerManager();
-  frameRate(10);*/
+  frameRate(5);
 }
 
-/*void draw() {
+void draw() {
   map.draw();
   markerManager.clearMarkers();
-  
-  
   
   if(count >= 288){
     return;
   }
   
-  ArrayList<float[]> interval = locations.get(count++);
+  ArrayList<float[]> p_interval = private_data.get(count++);
+  ArrayList<float[]> bus_interval = bus_data.get(count++);
+  ArrayList<float[]> taxi_interval = taxi_data.get(count++);
+  ArrayList<float[]> truck_interval = truck_data.get(count++);
+  
+  add_interval_to_map(p_interval, "private");
+  add_interval_to_map(bus_interval, "bus");
+  add_interval_to_map(taxi_interval, "taxi");
+  add_interval_to_map(truck_interval, "truck");
+  
 
-  for (float[] v : interval) {
+
+}
+
+void add_interval_to_map(ArrayList<float[]> interval, String type){
+    for (float[] v : interval) {
     int vid = int(v[0]);
     float lon = v[1];
     float lat = v[2];
     
-    System.out.println(vid);
+//System.out.println(vid);
+    int one = 0; int two = 0; int three = 0;
+
+    if (type.equals("private")){
+      one = 255; two = 0; three = 0;      
+    }
+    
+    if (type.equals("bus")){
+      one = 0; two = 0; three = 255;      
+    }
+    
+    if (type.equals("truck")){
+      one = 0; two = 204; three = 0;    
+    }
+    
+    if (type.equals("taxi")){
+      one = 255; two = 255; three = 0;      
+    }
+    
 
     Location startLocation = new Location(lat, lon);
     SimplePointMarker startMarker = new SimplePointMarker(startLocation);
     
-    int one = 0; int two = 0; int three = 0;
-    if(vid > 255){
-      three = 255;
-      vid -= 255;
-    }
-    else{
-      three = vid;
-      vid = 0;
-    }
     
-    if(vid > 255){
-      two = 255;
-      vid -= 255;
-    }
-    else{
-      two = vid;
-      vid = 0;
-    }
-    
-    if(vid > 255){
-      one = 255;
-      vid -= 255;
-    }
-    else{
-      one = vid;
-      vid = 0;
-    }
     
 
-    startMarker.setColor(color(one, two, three, vid));
+//    if(vid > 255){
+//      three = 255;
+//      vid -= 255;
+//    }
+//    else{
+//      three = vid;
+//      vid = 0;
+//    }
+//    
+//    if(vid > 255){
+//      two = 255;
+//      vid -= 255;
+//    }
+//    else{
+//      two = vid;
+//      vid = 0;
+//    }
+//    
+//    if(vid > 255){  
+//      one = 255;
+//      vid -= 255;
+//    }
+//    else{
+//      one = vid;
+//      vid = 0;
+//    }
+    
+
+  
     markerManager.addMarker(startMarker);
     // startMarker.setStrokeWeight(3);
+    startMarker.setRadius(3);
+    startMarker.setColor(color(one, two, three));
   
     //startMarker.setColor(color(vid, 5, 100, vid*3));
     // startMarker.setStrokeColor(color(vid, vid, vid));
 
 
   }
-}*/
+}
 
 
 
