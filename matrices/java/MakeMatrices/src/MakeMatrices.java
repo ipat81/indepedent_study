@@ -1,17 +1,30 @@
 import javafx.scene.shape.*;
-import java.awt.Point;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class MakeMatrices {
+	public static final int SECONDS_IN_A_DAY = 86400;
+	
+	// indices for accessing the location arrays in vehiclePaths (see makeVehicleArray())
+	public static final int ID = 0;
+	public static final int TIME = 1;
+	public static final int LON = 2;
+	public static final int LAT = 3;
+	public static final int REGION = 4;
+	
+	public static boolean isSamePoint(double[] point1, double[] point2){
+		return (point1[0] == point2[0]) && (point1[1] == point2[1]);
+	}
+	
 	public static double distance(double[] p1, double[] p2){
 		return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
 	}
@@ -25,6 +38,20 @@ public class MakeMatrices {
 		return distances;
 	}
 	
+	public static double getLatestTime(String filename) throws IOException{
+		BufferedReader f = new BufferedReader(new FileReader(filename));
+		String line = "";
+		double latestTime = -1;
+		while ((line = f.readLine()) != null) {
+			if(line.split(",").length == 4){
+				latestTime = Math.max(latestTime, Double.parseDouble(line.split(",")[TIME]));
+			}
+		}
+		f.close();
+		
+		return latestTime;
+	}
+	
 	public static int getLastVehicleId(String filename) throws IOException{
 		BufferedReader f = new BufferedReader(new FileReader(filename));
 		String lastLine = "";
@@ -32,7 +59,7 @@ public class MakeMatrices {
 		while ((line = f.readLine()) != null) {
 			lastLine = (line.indexOf(',') == -1) ? lastLine : line;
 		}
-		int lastVehicleId = Integer.parseInt(lastLine.split(",")[0]);
+		int lastVehicleId = Integer.parseInt(lastLine.split(",")[ID]);
 		f.close();
 		
 		return lastVehicleId;
@@ -65,6 +92,12 @@ public class MakeMatrices {
 		ArrayList<JSONArray> plist = makePnpolyPolygonList();
 		ArrayList<double[]> regionPoints = makeRegionPoints(plist);
 		ArrayList<ArrayList<double[]>> vehiclePaths = makeVehicleArray("data/private_raw_p.txt", plistPolygon, regionPoints);
+		
+		int matrixTimeInterval = 300;
+		int numRegions = plist.size() + 1; // add one for points outside all regions
+		int minStopTime = 180;
+		
+		int[][][] matrices = makeMatrices(vehiclePaths, numRegions, matrixTimeInterval, minStopTime, "data/private_raw_p.txt");
 		
 		long endTime = System.nanoTime();
 		long duration = endTime - startTime;
@@ -201,5 +234,79 @@ public class MakeMatrices {
 		}
 		
 		return region;
+	}
+	
+	public static int[][][] makeMatrices
+	(ArrayList<ArrayList<double[]>> vehiclePaths, int numRegions, int matrixTimeInterval, int minStopTime, String filename)
+	throws IOException{
+		double latestTime = getLatestTime(filename);
+		int numDays = (int)Math.ceil(latestTime / (double)SECONDS_IN_A_DAY);
+		int numMatricesPerDay = SECONDS_IN_A_DAY / matrixTimeInterval;
+		int[][][] matrices = new int[numMatricesPerDay * numDays][numRegions][numRegions];
+		
+		for(ArrayList<double[]> path : vehiclePaths){
+			// can't have an origin and destination
+			if(path.size() < 2){
+				continue;
+			}
+			
+			double[] firstLocation = path.get(0);
+			double originRegion = firstLocation[REGION];
+			double originTime = firstLocation[TIME];
+			double[] originCoord = {firstLocation[LON], firstLocation[LAT]};
+			double[] prevLocationCoord = null;
+			double prevLocationTime = -1.0;
+			double prevLocationRegion = -1.0;
+			double prevLocationDuration = 0;
+			
+			for(int i = 1; i < path.size(); i++){
+				double[] location = path.get(i);
+				double locationTime = location[TIME];
+				double locationRegion = location[REGION];
+				double[] locationCoord = {location[LON], location[LAT]};
+				
+				// we are still at the previous location so skip
+				if(isSamePoint(locationCoord, originCoord)){
+					continue;
+				}
+				
+				// just set a new origin so there's no previous location since leaving the origin
+				if(prevLocationCoord == null){
+					prevLocationCoord = locationCoord;
+					prevLocationTime = locationTime;
+					prevLocationRegion = locationRegion;
+				}
+				// vehicle stayed in same place
+				else if(isSamePoint(prevLocationCoord, locationCoord)){
+					// update time spent at location
+					prevLocationDuration += locationTime - prevLocationTime;
+					prevLocationTime = locationTime;
+					
+					if(prevLocationDuration >= minStopTime){
+						// update matrix
+						int matrixIndex = (((int)originTime % SECONDS_IN_A_DAY) / matrixTimeInterval) + (((int)originTime / SECONDS_IN_A_DAY) * numMatricesPerDay) ;
+						matrices[matrixIndex][(int)originRegion][(int)prevLocationRegion]++;
+						
+						// update origin to prev location and reset prev location
+						originTime = prevLocationTime;
+						originCoord = prevLocationCoord;
+						originRegion = prevLocationRegion;
+						prevLocationCoord = null;
+						prevLocationTime = -1;
+						prevLocationRegion = -1;
+						prevLocationDuration = 0;
+					}
+				}
+				// vehicle moved to another location
+				else{
+					prevLocationCoord = locationCoord;
+					prevLocationTime = locationTime;
+					prevLocationRegion = locationRegion;
+					prevLocationDuration = 0;
+				}
+			}
+		}
+		
+		return matrices;
 	}
 }
