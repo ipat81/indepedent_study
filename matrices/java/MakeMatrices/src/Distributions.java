@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -13,7 +14,7 @@ import org.json.simple.parser.ParseException;
 
 import org.apache.commons.cli.*;
 
-public class MakeMatrices {
+public class Distributions {
 	public static final int SECONDS_IN_A_DAY = 86400;
 	
 	// indices for accessing the location arrays in vehiclePaths (see makeVehicleArray())
@@ -51,10 +52,6 @@ public class MakeMatrices {
         pf.setRequired(true);
         options.addOption(pf);
         
-        Option mti = new Option("mti", "matrixTimeInterval", true, "Time interval between matrices in seconds. For example, \"-mti 300\" makes 288 matrices for 1 day.");
-        mti.setRequired(false);
-        options.addOption(mti);
-        
         Option mst = new Option("mst", "minimumStopTime", true, "Minimum time, in seconds, that a vehicle must stay at a location before it is considered a stop.");
         mst.setRequired(false);
         options.addOption(mst);
@@ -64,7 +61,7 @@ public class MakeMatrices {
         }
         catch(org.apache.commons.cli.ParseException e){
             System.out.println(e.getMessage());
-            formatter.printHelp("MakeMatrices", options);
+            formatter.printHelp("Distributions", options);
 
             System.exit(1);
             return;
@@ -72,16 +69,18 @@ public class MakeMatrices {
         
         pathsFilename = cmd.getOptionValue("pathFile");
         polygonsFilename = cmd.getOptionValue("regionFile");
-        int matrixTimeInterval = Integer.parseInt(cmd.getOptionValue("matrixTimeInterval", "300"));
         int minStopTime = Integer.parseInt(cmd.getOptionValue("minimumStopTime", "180"));
+        int[] timeGraphDataList = new int[1000];
+        HashMap<Integer, Integer> timeGraphDataMap = new HashMap<Integer, Integer>();
+        int[] distanceGraphDataList = new int[5000];
+        HashMap<Integer, Integer> distanceGraphDataMap = new HashMap<Integer, Integer>();
         
 		ArrayList<Polygon> plistPolygon = makePolygonList();
 		ArrayList<JSONArray> plist = makePnpolyPolygonList();
 		ArrayList<double[]> regionPoints = makeRegionPoints(plist);
 		ArrayList<ArrayList<double[]>> vehiclePaths = makeVehicleArray(pathsFilename, plistPolygon, regionPoints);
-		
-		int numRegions = plist.size() + 1; // add one for points outside all regions
-		int[][][] matrices = makeMatrices(vehiclePaths, numRegions, matrixTimeInterval, minStopTime, pathsFilename);
+		makeGraphData(vehiclePaths, minStopTime, pathsFilename, timeGraphDataList, timeGraphDataMap
+				, distanceGraphDataList, distanceGraphDataMap);
 		
 		long endTime = System.nanoTime();
 		long duration = endTime - startTime;
@@ -220,14 +219,9 @@ public class MakeMatrices {
 		return region;
 	}
 	
-	public static int[][][] makeMatrices
-	(ArrayList<ArrayList<double[]>> vehiclePaths, int numRegions, int matrixTimeInterval, int minStopTime, String filename)
-	throws IOException{
-		double latestTime = Util.getLatestTime(filename);
-		int numDays = (int)Math.ceil(latestTime / (double)SECONDS_IN_A_DAY);
-		int numMatricesPerDay = SECONDS_IN_A_DAY / matrixTimeInterval;
-		int[][][] matrices = new int[numMatricesPerDay * numDays][numRegions][numRegions];
-		
+	public static void makeGraphData(ArrayList<ArrayList<double[]>> vehiclePaths, int minStopTime,
+	String filename, int[] timeGraphDataList, HashMap<Integer, Integer> timeGraphDataMap,
+	int[] distanceGraphDataList, HashMap<Integer, Integer> distanceGraphDataMap)throws IOException{	
 		for(ArrayList<double[]> path : vehiclePaths){
 			// can't have an origin and destination
 			if(path.size() < 2){
@@ -235,62 +229,77 @@ public class MakeMatrices {
 			}
 			
 			double[] firstLocation = path.get(0);
-			double originRegion = firstLocation[REGION];
-			double originTime = firstLocation[TIME];
 			double[] originCoord = {firstLocation[LON], firstLocation[LAT]};
 			double[] prevLocationCoord = null;
 			double prevLocationTime = -1.0;
-			double prevLocationRegion = -1.0;
 			double prevLocationDuration = 0;
+			double tripDistance = 0; // in km
+			double tripTime = 0;
 			
 			for(int i = 1; i < path.size(); i++){
 				double[] location = path.get(i);
 				double locationTime = location[TIME];
-				double locationRegion = location[REGION];
 				double[] locationCoord = {location[LON], location[LAT]};
 				
 				// we are still at the previous location so skip
 				if(Util.isSamePoint(locationCoord, originCoord)){
 					continue;
 				}
-				
 				// just set a new origin so there's no previous location since leaving the origin
 				if(prevLocationCoord == null){
 					prevLocationCoord = locationCoord;
 					prevLocationTime = locationTime;
-					prevLocationRegion = locationRegion;
 				}
 				// vehicle stayed in same place
 				else if(Util.isSamePoint(prevLocationCoord, locationCoord)){
-					// update time spent at location
+					// update time spent at location and distance
 					prevLocationDuration += locationTime - prevLocationTime;
 					prevLocationTime = locationTime;
+					tripTime += locationTime - prevLocationTime;
 					
 					if(prevLocationDuration >= minStopTime){
-						// update matrix
-						int matrixIndex = (((int)originTime % SECONDS_IN_A_DAY) / matrixTimeInterval) + (((int)originTime / SECONDS_IN_A_DAY) * numMatricesPerDay) ;
-						matrices[matrixIndex][(int)originRegion][(int)prevLocationRegion]++;
+						// add to graph data
+						int tripTimeMinutes = (int)(tripTime / 60);
+						int frequency = timeGraphDataMap.containsKey(tripTimeMinutes) ?
+								timeGraphDataMap.get(tripTimeMinutes) + 1 : 1;
+						if(tripTimeMinutes >= timeGraphDataList.length){
+							timeGraphDataMap.put(tripTimeMinutes, frequency);
+						}
+						else{
+							timeGraphDataList[tripTimeMinutes] = frequency;
+						}
+						int tripDistanceRounded = (int)tripDistance;
+						frequency = distanceGraphDataMap.containsKey(tripDistanceRounded) ?
+								distanceGraphDataMap.get(tripDistanceRounded) + 1 : 1;
+						if(tripDistanceRounded >= distanceGraphDataList.length){
+							distanceGraphDataMap.put(tripDistanceRounded, frequency);
+						}
+						else{
+							distanceGraphDataList[tripDistanceRounded] = frequency;
+						}
 						
-						// update origin to prev location and reset prev location
-						originTime = prevLocationTime;
-						originCoord = prevLocationCoord;
-						originRegion = prevLocationRegion;
+						// update origin to location
+						originCoord = locationCoord;
+						
+						// reset prev location and distance and time
 						prevLocationCoord = null;
 						prevLocationTime = -1;
-						prevLocationRegion = -1;
 						prevLocationDuration = 0;
+						tripDistance = 0;
+						tripTime = 0;
 					}
 				}
 				// vehicle moved to another location
 				else{
 					prevLocationCoord = locationCoord;
 					prevLocationTime = locationTime;
-					prevLocationRegion = locationRegion;
 					prevLocationDuration = 0;
+					tripDistance = Util.distanceKm(prevLocationCoord, locationCoord);
+					tripTime += locationTime - prevLocationTime;
 				}
 			}
 		}
 		
-		return matrices;
+		return;
 	}
 }
