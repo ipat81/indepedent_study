@@ -23,7 +23,7 @@ public class Util {
 	}
 	
 	/* 
-	 * Created using the haversine formua found here:
+	 * Uses haversine formula found here:
 	 * http://www.movable-type.co.uk/scripts/latlong.html
 	 */
 	public static double distanceKm(double[] p1, double[] p2){

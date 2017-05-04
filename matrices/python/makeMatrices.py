@@ -15,7 +15,7 @@ import pandas as pd
 MIN_STOP_TIME = 180
 MATRIX_TIME_INTERVAL = 300
 REGIONS_FILE = 'data/shenzhen_tran_mapbox_polygon.json'
-PATHS_FILE = 'data/small_private_raw_p.txt'
+PATHS_FILE = 'data/bus_raw_p.txt'
 
 def make_polygon_list():
     polygon_list = []
@@ -88,10 +88,11 @@ def make_distance_list(lon, lat, region_points):
         distances.append(distance((lon,lat), (r[0],r[1])))
     return distances
 
-
 def make_matrices(vehicle_paths, num_regions):
     num_matrices = 86400 / MATRIX_TIME_INTERVAL
+    mtime = time.time()
     matrices = [[[0] * num_regions for j in xrange(num_regions)] for i in xrange(num_matrices)]
+    print 'time spent making matrix: ', time.time() - mtime
 
     for path in vehicle_paths:
         # ya never know
@@ -145,7 +146,6 @@ def make_matrices(vehicle_paths, num_regions):
     
     # TODO: write to .mat file
     return matrices
-
 
 def make_vehicle_array(filename, polygon_list, region_points, use_pandas=False):
     total_time = time.time()

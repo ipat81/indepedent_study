@@ -82,6 +82,12 @@ public class Distributions {
 		makeGraphData(vehiclePaths, minStopTime, pathsFilename, timeGraphDataList, timeGraphDataMap
 				, distanceGraphDataList, distanceGraphDataMap);
 		
+		for(int i = 0; i < distanceGraphDataList.length; i++){
+			if(distanceGraphDataList[i] > 0){
+				System.out.println("time: " + i + " freq: " + distanceGraphDataList[i]);
+			}
+		}
+		
 		long endTime = System.nanoTime();
 		long duration = endTime - startTime;
 		double seconds = ((double)duration / 1000000000);
@@ -241,6 +247,7 @@ public class Distributions {
 				double locationTime = location[TIME];
 				double[] locationCoord = {location[LON], location[LAT]};
 				
+				
 				// we are still at the previous location so skip
 				if(Util.isSamePoint(locationCoord, originCoord)){
 					continue;
@@ -252,30 +259,30 @@ public class Distributions {
 				}
 				// vehicle stayed in same place
 				else if(Util.isSamePoint(prevLocationCoord, locationCoord)){
-					// update time spent at location and distance
+					// update time spent at location
 					prevLocationDuration += locationTime - prevLocationTime;
-					prevLocationTime = locationTime;
 					tripTime += locationTime - prevLocationTime;
+					prevLocationTime = locationTime;
 					
 					if(prevLocationDuration >= minStopTime){
 						// add to graph data
-						int tripTimeMinutes = (int)(tripTime / 60);
-						int frequency = timeGraphDataMap.containsKey(tripTimeMinutes) ?
-								timeGraphDataMap.get(tripTimeMinutes) + 1 : 1;
+						int tripTimeMinutes = (int)(tripTime / 60.0);
 						if(tripTimeMinutes >= timeGraphDataList.length){
+							int frequency = timeGraphDataMap.containsKey(tripTimeMinutes) ?
+									timeGraphDataMap.get(tripTimeMinutes) + 1 : 1;
 							timeGraphDataMap.put(tripTimeMinutes, frequency);
 						}
 						else{
-							timeGraphDataList[tripTimeMinutes] = frequency;
+							timeGraphDataList[tripTimeMinutes] += 1;
 						}
 						int tripDistanceRounded = (int)tripDistance;
-						frequency = distanceGraphDataMap.containsKey(tripDistanceRounded) ?
-								distanceGraphDataMap.get(tripDistanceRounded) + 1 : 1;
 						if(tripDistanceRounded >= distanceGraphDataList.length){
+							int frequency = distanceGraphDataMap.containsKey(tripDistanceRounded) ?
+									distanceGraphDataMap.get(tripDistanceRounded) + 1 : 1;
 							distanceGraphDataMap.put(tripDistanceRounded, frequency);
 						}
 						else{
-							distanceGraphDataList[tripDistanceRounded] = frequency;
+							distanceGraphDataList[tripDistanceRounded] += 1;
 						}
 						
 						// update origin to location
@@ -291,11 +298,11 @@ public class Distributions {
 				}
 				// vehicle moved to another location
 				else{
+					tripDistance += Util.distanceKm(prevLocationCoord, locationCoord);
+					tripTime += locationTime - prevLocationTime;
 					prevLocationCoord = locationCoord;
 					prevLocationTime = locationTime;
 					prevLocationDuration = 0;
-					tripDistance = Util.distanceKm(prevLocationCoord, locationCoord);
-					tripTime += locationTime - prevLocationTime;
 				}
 			}
 		}

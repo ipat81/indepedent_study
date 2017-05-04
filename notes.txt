@@ -1,1 +1,5 @@
 1. pnpoly alogorithms - http://erich.realtimerendering.com/ptinpoly/
+
+We need to make a distribution of distance traveled to frequency. As well as time traveled to frequency. Basically, a line graph that shows how many cars traveled a given distance and the relationship between the two variables. Same for time. We also need to derive a function of the line from the graphs.
+
+This code must be pretty modular because it needds to work for all regions or 1 particular region. It should also be able to take in data from any source (private, bus, truck, etc). We need to use starting region as the region in question when looking through data. 
