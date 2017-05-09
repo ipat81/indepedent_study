@@ -36,6 +36,54 @@ public class Distributions {
 		return distances;
 	}
 	
+		public static void makeGraph(double [] timeGraphDataList, HashMap<Integer, Integer> timeGraphDataMap, double [] distanceGraphDataList, HashMap<Integer, Integer>distanceGraphDataMap) {		
+		// x axis
+		double [] timeList = new double[1000];
+		double [] distanceList = new double[5000];
+		
+		if (timeGraphDataMap.isEmpty()){
+			System.out.println("TIME HASHMAP IS EMPTY");
+		}
+		
+		if (distanceGraphDataMap.isEmpty()){
+			System.out.println("DISTANCE HASHMAP IS EMPTY");
+		}
+		
+		System.out.println(timeGraphDataMap.size());
+		System.out.println(distanceGraphDataMap.size());
+		
+		for (int i = 0; i < 5000; i++){
+			if (i < 1000){
+				timeList[i] = i;
+			}
+			distanceList[i] = i;
+		}
+		
+		makeGraphHelper(timeList, timeGraphDataList, "Time Graph");
+		makeGraphHelper(distanceList, distanceGraphDataList, "Distance Graph");
+		
+			
+	}
+	
+	public static void makeGraphHelper(double [] x, double [] y, String title){
+		
+        Plot2DPanel plot = new Plot2DPanel();
+        
+        // define the legend position
+        plot.addLegend("SOUTH");
+
+        // add a line plot to the PlotPanel
+        plot.addLinePlot(title, x, y);
+
+        // put the PlotPanel in a JFrame like a JPanel
+        JFrame frame = new JFrame(title);
+        frame.setSize(600, 600);
+        frame.setContentPane(plot);
+        frame.setVisible(true);
+		
+		
+	}
+	
 	public static void main(String[] args) throws IOException, ParseException {
 		long startTime = System.nanoTime();
 		
@@ -70,7 +118,7 @@ public class Distributions {
         pathsFilename = cmd.getOptionValue("pathFile");
         polygonsFilename = cmd.getOptionValue("regionFile");
         int minStopTime = Integer.parseInt(cmd.getOptionValue("minimumStopTime", "180"));
-        int[] timeGraphDataList = new int[1000];
+        double[] timeGraphDataList = new double[1000];
         HashMap<Integer, Integer> timeGraphDataMap = new HashMap<Integer, Integer>();
         int[] distanceGraphDataList = new int[5000];
         HashMap<Integer, Integer> distanceGraphDataMap = new HashMap<Integer, Integer>();
@@ -81,6 +129,7 @@ public class Distributions {
 		ArrayList<ArrayList<double[]>> vehiclePaths = makeVehicleArray(pathsFilename, plistPolygon, regionPoints);
 		makeGraphData(vehiclePaths, minStopTime, pathsFilename, timeGraphDataList, timeGraphDataMap
 				, distanceGraphDataList, distanceGraphDataMap);
+		makeGraph(timeGraphDataList, timeGraphDataMap, distanceGraphDataList, distanceGraphDataMap);
 		
 		for(int i = 0; i < distanceGraphDataList.length; i++){
 			if(distanceGraphDataList[i] > 0){
