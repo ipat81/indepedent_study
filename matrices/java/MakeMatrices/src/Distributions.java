@@ -1,4 +1,5 @@
-import javafx.scene.shape.*;
+package independent_study;
+
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -7,13 +8,25 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.swing.JFrame;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.math.plot.Plot2DPanel;
+import org.apache.commons.math3.*;
+import org.apache.commons.math3.fitting.PolynomialCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoints;
 
-import org.apache.commons.cli.*;
-
+import javafx.scene.shape.Polygon;
+import org.apache.commons.*;
 public class Distributions {
 	public static final int SECONDS_IN_A_DAY = 86400;
 	
@@ -26,6 +39,7 @@ public class Distributions {
 	
 	public static String pathsFilename;
 	public static String polygonsFilename;
+	public static String consideredRegionsFileName;
 	
 	public static double[] makeDistanceList(double lon, double lat, ArrayList<double[]> regionPoints){
 		double[] distances = new double[regionPoints.size()];
@@ -35,11 +49,30 @@ public class Distributions {
 		
 		return distances;
 	}
-	
-		public static void makeGraph(double [] timeGraphDataList, HashMap<Integer, Integer> timeGraphDataMap, double [] distanceGraphDataList, HashMap<Integer, Integer>distanceGraphDataMap) {		
+	public static String makeFunction(double [] x, double [] y){
+		final WeightedObservedPoints obs = new WeightedObservedPoints();
+		
+		for (double x_value : x){
+			for (double y_value : y){
+				obs.add(x_value, y_value);
+				
+			}			
+		}
+		
+		final PolynomialCurveFitter fitter = PolynomialCurveFitter.create(3);
+		final double [] coeff = fitter.fit(obs.toList());
+		
+		//String equation = coeff[0] + "x^3" + coeff[1] + "x^2" + coeff[2] + "x" + coeff[3];
+		String equation = coeff[0] + "x^2" + coeff[1] + "x" + coeff[2];
+		//String equation = "";
+		return equation;
+		
+		
+	}
+	public static void makeGraph(double [] timeGraphDataList, HashMap<Integer, Integer> timeGraphDataMap, double [] distanceGraphDataList, HashMap<Integer, Integer>distanceGraphDataMap) {		
 		// x axis
-		double [] timeList = new double[1000];
-		double [] distanceList = new double[5000];
+		double [] timeList = new double[500];
+		double [] distanceList = new double[500];
 		
 		if (timeGraphDataMap.isEmpty()){
 			System.out.println("TIME HASHMAP IS EMPTY");
@@ -52,15 +85,26 @@ public class Distributions {
 		System.out.println(timeGraphDataMap.size());
 		System.out.println(distanceGraphDataMap.size());
 		
-		for (int i = 0; i < 5000; i++){
-			if (i < 1000){
-				timeList[i] = i;
-			}
+		//time/distance is increments of 1
+//		for (int i = 0; i < 5000; i++){
+//			if (i < 1000){
+//				timeList[i] = i;
+//			}
+//			distanceList[i] = i;
+//		}
+		
+		double [] timeGraphDataListModified = new double[500];
+		double [] distanceGraphDataListModified = new double[500];
+		
+		for (int i = 0; i < 500; i++){
+			timeList[i] = i;
 			distanceList[i] = i;
+			timeGraphDataListModified[i] = timeGraphDataList[i];
+			distanceGraphDataListModified[i] = distanceGraphDataList[i];
 		}
 		
-		makeGraphHelper(timeList, timeGraphDataList, "Time Graph");
-		makeGraphHelper(distanceList, distanceGraphDataList, "Distance Graph");
+		makeGraphHelper(timeList, timeGraphDataListModified, "Time Graph");
+		makeGraphHelper(distanceList, distanceGraphDataListModified, "Distance Graph");
 		
 			
 	}
@@ -73,7 +117,9 @@ public class Distributions {
         plot.addLegend("SOUTH");
 
         // add a line plot to the PlotPanel
-        plot.addLinePlot(title, x, y);
+        String equation = makeFunction(x, y);
+        //String equation = "";
+        plot.addLinePlot(title + " " + equation, x, y);
 
         // put the PlotPanel in a JFrame like a JPanel
         JFrame frame = new JFrame(title);
@@ -104,6 +150,10 @@ public class Distributions {
         mst.setRequired(false);
         options.addOption(mst);
         
+        Option regions = new Option("regions", "consideredRegionsFile", true, "considered regions file path");
+        mst.setRequired(false);
+        options.addOption(regions);
+        
         try{
             cmd = parser.parse(options, args);
         }
@@ -117,30 +167,30 @@ public class Distributions {
         
         pathsFilename = cmd.getOptionValue("pathFile");
         polygonsFilename = cmd.getOptionValue("regionFile");
+        consideredRegionsFileName = cmd.getOptionValue("consideredRegionsFile");
         int minStopTime = Integer.parseInt(cmd.getOptionValue("minimumStopTime", "180"));
         double[] timeGraphDataList = new double[1000];
         HashMap<Integer, Integer> timeGraphDataMap = new HashMap<Integer, Integer>();
-        int[] distanceGraphDataList = new int[5000];
+        double[] distanceGraphDataList = new double[5000];
         HashMap<Integer, Integer> distanceGraphDataMap = new HashMap<Integer, Integer>();
         
 		ArrayList<Polygon> plistPolygon = makePolygonList();
 		ArrayList<JSONArray> plist = makePnpolyPolygonList();
 		ArrayList<double[]> regionPoints = makeRegionPoints(plist);
-		ArrayList<ArrayList<double[]>> vehiclePaths = makeVehicleArray(pathsFilename, plistPolygon, regionPoints);
+		ArrayList<Integer> consideredRegionArray = makeConsideredRegionArray();
+		ArrayList<ArrayList<double[]>> vehiclePaths = makeVehicleArray(pathsFilename, plistPolygon, regionPoints, consideredRegionArray);
+		long startGraphTime = System.nanoTime();
 		makeGraphData(vehiclePaths, minStopTime, pathsFilename, timeGraphDataList, timeGraphDataMap
 				, distanceGraphDataList, distanceGraphDataMap);
 		makeGraph(timeGraphDataList, timeGraphDataMap, distanceGraphDataList, distanceGraphDataMap);
 		
-		for(int i = 0; i < distanceGraphDataList.length; i++){
-			if(distanceGraphDataList[i] > 0){
-				System.out.println("time: " + i + " freq: " + distanceGraphDataList[i]);
-			}
-		}
-		
 		long endTime = System.nanoTime();
 		long duration = endTime - startTime;
+		long gduration = endTime - startGraphTime;
 		double seconds = ((double)duration / 1000000000);
+		double gseconds = ((double)gduration / 1000000000);
 		System.out.println("time elapsed: " + new DecimalFormat("#.##########").format(seconds));
+		System.out.println("time elapsed graph: " + new DecimalFormat("#.##########").format(gseconds));
 	}
 	
 	public static ArrayList<Polygon> makePolygonList() throws FileNotFoundException, IOException, ParseException{
@@ -195,7 +245,27 @@ public class Distributions {
 		return centroids;
 	}
 	
-	public static ArrayList<ArrayList<double[]>> makeVehicleArray(String filename, ArrayList<Polygon> polygonList, ArrayList<double[]> regionPoints) throws IOException{
+	public static ArrayList<Integer> makeConsideredRegionArray() throws NumberFormatException, IOException{
+
+			if (consideredRegionsFileName == null){
+				return null;
+			}
+			BufferedReader f = new BufferedReader(new FileReader(consideredRegionsFileName));
+		
+			ArrayList<Integer> regionArray = new ArrayList<Integer>();
+					
+			for (String s : f.readLine().split(",")){
+				regionArray.add(Integer.parseInt(s));
+			}
+			
+			f.close();
+			
+			return regionArray;
+
+		
+	}
+	
+	public static ArrayList<ArrayList<double[]>> makeVehicleArray(String filename, ArrayList<Polygon> polygonList, ArrayList<double[]> regionPoints, ArrayList<Integer> consideredRegionArray) throws IOException{
 		String line = "";
 		int lastVehicleId = Util.getLastVehicleId(filename);
 		BufferedReader f = new BufferedReader(new FileReader(filename));
@@ -251,6 +321,10 @@ public class Distributions {
 			}
 			whichPolyTime += System.nanoTime() - s;
 			
+			if (consideredRegionArray != null && !consideredRegionArray.contains(region)){
+				continue;
+			}
+			
 			double[] v = {id, time, lon, lat, (double) region};
 			vehiclePaths.get((int) v[0]).add(v);
 		}
@@ -275,8 +349,8 @@ public class Distributions {
 	}
 	
 	public static void makeGraphData(ArrayList<ArrayList<double[]>> vehiclePaths, int minStopTime,
-	String filename, int[] timeGraphDataList, HashMap<Integer, Integer> timeGraphDataMap,
-	int[] distanceGraphDataList, HashMap<Integer, Integer> distanceGraphDataMap)throws IOException{	
+	String filename, double[] timeGraphDataList, HashMap<Integer, Integer> timeGraphDataMap,
+	double[] distanceGraphDataList, HashMap<Integer, Integer> distanceGraphDataMap)throws IOException{	
 		for(ArrayList<double[]> path : vehiclePaths){
 			// can't have an origin and destination
 			if(path.size() < 2){
@@ -357,5 +431,5 @@ public class Distributions {
 		}
 		
 		return;
-	}
+}
 }
