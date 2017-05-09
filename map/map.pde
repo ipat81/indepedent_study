@@ -84,10 +84,10 @@ void setup() {
   MapUtils.createDefaultEventDispatcher(this, map);
   map.zoomAndPanTo(new Location(22.57356597f, 114.0544452f), 10);
 
-  private_data = readFile("private_raw_p.txt");
-  bus_data = readFile("bus_raw_p.txt");
-  taxi_data = readFile("taxi_raw_p.txt");
-  truck_data = readFile("truck_raw_p.txt");
+  private_data = readFile("small_private_raw_p.txt");
+  bus_data = readFile("small_bus_raw_p.txt");
+  taxi_data = readFile("small_taxi_raw_p.txt");
+  truck_data = readFile("small_truck_raw_p.txt");
   
   markerManager = map.getDefaultMarkerManager();
   frameRate(5);
@@ -188,23 +188,3 @@ void add_interval_to_map(ArrayList<float[]> interval, String type){
   }
 }
 
-
-
-    //Point
-    //    Location startLocation = new Location(starty, startx);
-    //    SimplePointMarker startMarker = new SimplePointMarker(startLocation);
-    //    map.addMarkers(startMarker);
-    //    startMarker.setStrokeWeight(1);
-  //public void mouseMoved() {
-  //    Marker hitMarker = map.getFirstHitMarker(mouseX, mouseY);
-  //    if (hitMarker != null) {
-  //        // Select current marker 
-  //        hitMarker.setSelected(true);
-  //        System.out.println(hitMarker.getLocation());
-  //    } else {
-  //        // Deselect all other markers
-  //        for (Marker marker : map.getMarkers()) {
-  //            marker.setSelected(false);
-  //        }
-  //    }
-  //}
