@@ -1,0 +1,1 @@
+**NOTE:** The [python](https://github.com/ipat81/indepedent_study/tree/master/matrices/python) and [ccp](https://github.com/ipat81/indepedent_study/tree/master/matrices/cpp) folders only contain things that we were experimenting with. The actual code can be found in the [java](https://github.com/ipat81/indepedent_study/tree/master/matrices/java/MakeMatrices) folder.
