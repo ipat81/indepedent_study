@@ -12,3 +12,6 @@
 
 ## slide & tutorial
 - contains slides from our presentations on processing and sumo.
+
+## report.pdf
+- a report of what we have worked on throughout the semester.
